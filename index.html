@@ -185,30 +185,16 @@
 
 </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDATA9W9seG4vtEjjQpfVpKxJX5XI4_OS4",
-  authDomain: "calculadora-f9570.firebaseapp.com",
-  projectId: "calculadora-f9570",
-  storageBucket: "calculadora-f9570.firebasestorage.app",
-  messagingSenderId: "277728766658",
-  appId: "1:277728766658:web:54a966f441fa8dda35e95b"
-};
-const fbApp = initializeApp(firebaseConfig);
-const db = getFirestore(fbApp);
-
+<script>
 (function(){
   var fmt = function(n){ return "R$ " + Math.round(n).toLocaleString("pt-BR"); };
   function val(id){ var v = parseFloat(document.getElementById(id).value); return isNaN(v) ? 0 : v; }
 
   var computado = {};
-  var carregando = true;
+  var carregando = false;
+  var aoMudar = null;
 
-  function statusNuvem(txt){ document.getElementById("status-nuvem").textContent = txt; }
+  function status(txt){ var el = document.getElementById("status-nuvem"); if (el) el.textContent = txt; }
 
   function coletarEstado(){
     var produtos = {};
@@ -247,27 +233,13 @@ const db = getFirestore(fbApp);
     }
   }
 
-  var uid = null;
-  var timerSalvar = null;
-  function salvarConfig(){
-    if (carregando || !uid) return;
-    statusNuvem("Salvando...");
-    clearTimeout(timerSalvar);
-    timerSalvar = setTimeout(function(){
-      setDoc(doc(db, "usuarios", uid), coletarEstado())
-        .then(function(){ statusNuvem("Preços salvos na nuvem."); })
-        .catch(function(){ statusNuvem("Não consegui salvar na nuvem agora."); });
-    }, 600);
-  }
-
   function calc(){
     var alvo = val("bruto-alvo");
     var hEncontro = val("hencontro");
-    var hLives = 0;
     var hDisp = val("hdisp");
     var hSem = val("hsem");
     var periodo = document.getElementById("periodo").value;
-    var semanasMes = (hDisp > 0 && hSem > 0) ? hDisp / hSem : 4.33;
+    var semanasMes = (hDisp > 0 && hSem > 0) ? hDisp / hSem : 4.4;
     var diasSemana = 5;
 
     var soma = 0;
@@ -309,14 +281,12 @@ const db = getFirestore(fbApp);
       ? "Vendendo isso você fatura cerca de " + fmt(realizado) + " no mês."
       : "Marque ao menos um produto para calcular.";
 
-    var somaAtend = 0, temMentoria = false;
+    var somaAtend = 0;
     Object.keys(computado).forEach(function(id){
       var row = document.querySelector('.rev-row[data-target="' + id + '"]');
       if (row.dataset.tempo === "1") somaAtend += computado[id];
-      if (row.dataset.mentoria === "1") temMentoria = true;
     });
-    var horasLivres = hDisp - (temMentoria ? hLives : 0);
-    var maxAtend = hEncontro > 0 ? Math.floor(horasLivres / hEncontro) : 0;
+    var maxAtend = hEncontro > 0 ? Math.floor(hDisp / hEncontro) : 0;
     if (maxAtend < 0) maxAtend = 0;
 
     var elMax = document.getElementById("rev-max");
@@ -334,7 +304,8 @@ const db = getFirestore(fbApp);
     }
   }
 
-  function calcESalva(){ calc(); salvarConfig(); }
+  function notificar(){ if (!carregando && typeof aoMudar === "function"){ try { aoMudar(); } catch(e){} } }
+  function calcESalva(){ calc(); notificar(); }
 
   document.querySelectorAll(".rev-check, .rev-partes, .rev-price-in").forEach(function(el){
     el.addEventListener("input", calcESalva);
@@ -356,18 +327,71 @@ const db = getFirestore(fbApp);
   });
   document.getElementById("periodo").addEventListener("change", calcESalva);
 
-  // Cenários salvos
+  window.CalcApp = {
+    coletarEstado: coletarEstado,
+    aplicarEstado: function(e){ aplicarEstado(e); calc(); },
+    recalcular: calc,
+    status: status,
+    setCarregando: function(b){ carregando = !!b; },
+    onMudar: function(fn){ aoMudar = fn; }
+  };
+
+  calc();
+})();
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDATA9W9seG4vtEjjQpfVpKxJX5XI4_OS4",
+  authDomain: "calculadora-f9570.firebaseapp.com",
+  projectId: "calculadora-f9570",
+  storageBucket: "calculadora-f9570.firebasestorage.app",
+  messagingSenderId: "277728766658",
+  appId: "1:277728766658:web:54a966f441fa8dda35e95b"
+};
+
+function status(t){ if (window.CalcApp) window.CalcApp.status(t); }
+
+try {
+  const fbApp = initializeApp(firebaseConfig);
+  const db = getFirestore(fbApp);
+  const auth = getAuth(fbApp);
+  const provider = new GoogleAuthProvider();
+  setPersistence(auth, browserLocalPersistence);
+
+  let uid = null;
+  let pararCenarios = null;
+  let timer = null;
+
+  function salvarConfig(){
+    if (!uid) return;
+    status("Salvando...");
+    setDoc(doc(db, "usuarios", uid), window.CalcApp.coletarEstado())
+      .then(function(){ status("Preços salvos na nuvem."); })
+      .catch(function(){ status("Não consegui salvar na nuvem agora."); });
+  }
+  function salvarDebounce(){
+    if (!uid) return;
+    clearTimeout(timer);
+    timer = setTimeout(salvarConfig, 600);
+  }
+  window.CalcApp.onMudar(salvarDebounce);
+
   document.getElementById("salvar-cenario").addEventListener("click", function(){
-    if (!uid){ statusNuvem("Entre com o Google para salvar."); return; }
+    if (!uid){ status("Entre com o Google para salvar."); return; }
     var campo = document.getElementById("nome-cenario");
     var nome = campo.value.trim();
-    if (!nome){ campo.focus(); statusNuvem("Dê um nome ao cenário antes de salvar."); return; }
-    var dados = coletarEstado();
+    if (!nome){ campo.focus(); status("Dê um nome ao cenário antes de salvar."); return; }
+    var dados = window.CalcApp.coletarEstado();
     dados.nome = nome;
     dados.criadoEm = serverTimestamp();
     addDoc(collection(db, "usuarios", uid, "cenarios"), dados)
-      .then(function(){ campo.value = ""; statusNuvem("Cenário \"" + nome + "\" salvo."); })
-      .catch(function(){ statusNuvem("Não consegui salvar o cenário agora."); });
+      .then(function(){ campo.value = ""; status("Cenário \"" + nome + "\" salvo."); })
+      .catch(function(){ status("Não consegui salvar o cenário agora."); });
   });
 
   function renderCenarios(docs){
@@ -387,17 +411,16 @@ const db = getFirestore(fbApp);
       abrir.textContent = "Abrir";
       abrir.style.cssText = "height:32px;padding:0 12px;font-size:13px;border:0.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);cursor:pointer;";
       abrir.addEventListener("click", function(){
-        aplicarEstado(item.data);
-        calc();
-        salvarConfig();
-        statusNuvem("Cenário \"" + (item.data.nome || "") + "\" aberto.");
+        window.CalcApp.aplicarEstado(item.data);
+        salvarDebounce();
+        status("Cenário \"" + (item.data.nome || "") + "\" aberto.");
       });
       var excluir = document.createElement("button");
       excluir.textContent = "Excluir";
       excluir.style.cssText = "height:32px;padding:0 12px;font-size:13px;border:0.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--red);cursor:pointer;";
       excluir.addEventListener("click", function(){
         if (!uid) return;
-        deleteDoc(doc(db, "usuarios", uid, "cenarios", item.id)).catch(function(){ statusNuvem("Não consegui excluir agora."); });
+        deleteDoc(doc(db, "usuarios", uid, "cenarios", item.id)).catch(function(){ status("Não consegui excluir agora."); });
       });
       linha.appendChild(nome);
       linha.appendChild(abrir);
@@ -406,7 +429,6 @@ const db = getFirestore(fbApp);
     });
   }
 
-  var pararCenarios = null;
   function assinarCenarios(){
     if (pararCenarios){ pararCenarios(); pararCenarios = null; }
     pararCenarios = onSnapshot(query(collection(db, "usuarios", uid, "cenarios"), orderBy("criadoEm", "desc")), function(snap){
@@ -417,41 +439,34 @@ const db = getFirestore(fbApp);
   }
 
   function carregarConfig(){
-    statusNuvem("Carregando da nuvem...");
+    status("Carregando da nuvem...");
     getDoc(doc(db, "usuarios", uid)).then(function(snap){
-      if (snap.exists()) aplicarEstado(snap.data());
-      carregando = false;
-      calc();
-      statusNuvem(snap.exists() ? "Preços carregados da nuvem." : "Começando com os preços padrão.");
+      if (snap.exists()) window.CalcApp.aplicarEstado(snap.data());
+      window.CalcApp.setCarregando(false);
+      status(snap.exists() ? "Preços carregados da nuvem." : "Começando com os preços padrão.");
     }).catch(function(){
-      carregando = false;
-      calc();
-      statusNuvem("Abri sem a nuvem desta vez. Os preços novos ainda tentam salvar.");
+      window.CalcApp.setCarregando(false);
+      status("Abri sem a nuvem desta vez. Os preços novos ainda tentam salvar.");
     });
   }
 
-  // Login com o Google
-  var auth = getAuth(fbApp);
-  var provider = new GoogleAuthProvider();
-  setPersistence(auth, browserLocalPersistence);
-
   document.getElementById("entrar").addEventListener("click", function(){
-    statusNuvem("Abrindo o login do Google...");
+    status("Abrindo o login do Google...");
     signInWithPopup(auth, provider).catch(function(e){
       var code = (e && e.code) ? e.code : "";
       if (code.indexOf("popup") !== -1 || code.indexOf("cancelled") !== -1 || code.indexOf("operation-not-supported") !== -1){
         signInWithRedirect(auth, provider).catch(function(e2){
-          statusNuvem("Não consegui entrar: " + ((e2 && e2.code) ? e2.code : "erro") + ".");
+          status("Não consegui entrar: " + ((e2 && e2.code) ? e2.code : "erro") + ".");
         });
       } else {
-        statusNuvem("Não consegui entrar: " + (code || "erro") + ".");
+        status("Não consegui entrar: " + (code || "erro") + ".");
       }
     });
   });
   document.getElementById("sair").addEventListener("click", function(){ signOut(auth); });
 
   getRedirectResult(auth).catch(function(e){
-    statusNuvem("O login falhou: " + ((e && e.code) ? e.code : "erro") + ".");
+    status("O login falhou: " + ((e && e.code) ? e.code : "erro") + ".");
   });
 
   onAuthStateChanged(auth, function(user){
@@ -460,7 +475,7 @@ const db = getFirestore(fbApp);
       document.getElementById("entrar").style.display = "none";
       document.getElementById("conta-logada").style.display = "flex";
       document.getElementById("conta-email").textContent = user.email || "conectada";
-      carregando = true;
+      window.CalcApp.setCarregando(true);
       carregarConfig();
       assinarCenarios();
     } else {
@@ -469,13 +484,13 @@ const db = getFirestore(fbApp);
       document.getElementById("entrar").style.display = "inline-flex";
       document.getElementById("conta-logada").style.display = "none";
       document.getElementById("lista-cenarios").innerHTML = "";
-      carregando = false;
-      statusNuvem("Entre com o Google para salvar e sincronizar entre aparelhos.");
+      window.CalcApp.setCarregando(false);
+      status("Entre com o Google para salvar e sincronizar entre aparelhos.");
     }
   });
-
-  calc();
-})();
+} catch (err) {
+  status("A nuvem não carregou agora, mas a calculadora funciona normalmente.");
+}
 </script>
 </body>
 </html>
