@@ -50,12 +50,14 @@
   .rev-qty { font-size: 17px; font-weight: 700; text-align: right; color: var(--ink); justify-self: end; }
 
   @media (max-width: 540px) {
-    .rev-row { display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px; row-gap: 10px; }
-    .rev-check { order: 1; }
-    .rev-name { order: 2; flex: 1; min-width: 0; }
-    .price-wrap { order: 3; justify-self: auto; }
-    .rev-partes-wrap { order: 4; margin-left: auto; justify-self: auto; }
-    .rev-qty { order: 5; flex-basis: 100%; }
+    .rev-row { grid-template-columns: auto minmax(46px, 1fr) auto auto 70px; column-gap: 7px; padding: 12px 8px; }
+    .rev-name { font-size: 13px; line-height: 1.25; }
+    .price-wrap { justify-self: start; padding: 0 6px; gap: 1px; }
+    .price-wrap .pre { font-size: 11px; }
+    .rev-price-in { width: 50px; font-size: 13px; }
+    .rev-partes-wrap { justify-self: end; gap: 4px; font-size: 12px; }
+    .rev-partes { width: 38px; }
+    .rev-qty { justify-self: end; font-size: 12px; line-height: 1.2; }
   }
 
   #rev-real { font-size: 13px; color: var(--ink); margin-top: 14px; font-weight: 600; }
