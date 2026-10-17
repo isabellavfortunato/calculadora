@@ -35,8 +35,9 @@
   #bruto-alvo { width: 100%; border: none; background: transparent; font-size: 34px; font-weight: 700; color: var(--ink); padding: 0; }
   #bruto-alvo:focus { outline: none; }
 
-  .rev-row { display: grid; grid-template-columns: auto minmax(100px, 1.3fr) 1fr 1fr 96px; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 0.5px solid var(--line); }
+  .rev-row { display: grid; grid-template-columns: auto minmax(100px, 1.3fr) 1fr 1fr 96px; align-items: center; gap: 10px; padding: 12px 10px; border-bottom: 0.5px solid var(--line); border-radius: 10px; }
   .rev-row:last-of-type { border-bottom: 0; }
+  .rev-row:not(.off) { background: #e5e8eb; border-bottom-color: transparent; }
   .rev-row.off .price-wrap, .rev-row.off .rev-partes-wrap { opacity: 0.55; }
   .rev-check { width: 18px; height: 18px; accent-color: var(--green); }
   .rev-name { font-size: 14px; font-weight: 600; color: var(--ink); }
