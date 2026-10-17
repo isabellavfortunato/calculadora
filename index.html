@@ -50,12 +50,12 @@
   .rev-qty { font-size: 17px; font-weight: 700; text-align: right; color: var(--ink); justify-self: end; }
 
   @media (max-width: 540px) {
-    .rev-row { grid-template-columns: auto 1fr; grid-template-areas: "chk nome" "preco partes" "qty qty"; row-gap: 8px; }
-    .rev-check { grid-area: chk; }
-    .rev-name { grid-area: nome; }
-    .price-wrap { grid-area: preco; justify-self: start; }
-    .rev-partes-wrap { grid-area: partes; justify-self: end; }
-    .rev-qty { grid-area: qty; }
+    .rev-row { display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px; row-gap: 10px; }
+    .rev-check { order: 1; }
+    .rev-name { order: 2; flex: 1; min-width: 0; }
+    .price-wrap { order: 3; justify-self: auto; }
+    .rev-partes-wrap { order: 4; margin-left: auto; justify-self: auto; }
+    .rev-qty { order: 5; flex-basis: 100%; }
   }
 
   #rev-real { font-size: 13px; color: var(--ink); margin-top: 14px; font-weight: 600; }
@@ -186,7 +186,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDATA9W9seG4vtEjjQpfVpKxJX5XI4_OS4",
@@ -434,9 +434,23 @@ const db = getFirestore(fbApp);
   setPersistence(auth, browserLocalPersistence);
 
   document.getElementById("entrar").addEventListener("click", function(){
-    signInWithPopup(auth, provider).catch(function(){ statusNuvem("Não consegui entrar agora. Tente de novo."); });
+    statusNuvem("Abrindo o login do Google...");
+    signInWithPopup(auth, provider).catch(function(e){
+      var code = (e && e.code) ? e.code : "";
+      if (code.indexOf("popup") !== -1 || code.indexOf("cancelled") !== -1 || code.indexOf("operation-not-supported") !== -1){
+        signInWithRedirect(auth, provider).catch(function(e2){
+          statusNuvem("Não consegui entrar: " + ((e2 && e2.code) ? e2.code : "erro") + ".");
+        });
+      } else {
+        statusNuvem("Não consegui entrar: " + (code || "erro") + ".");
+      }
+    });
   });
   document.getElementById("sair").addEventListener("click", function(){ signOut(auth); });
+
+  getRedirectResult(auth).catch(function(e){
+    statusNuvem("O login falhou: " + ((e && e.code) ? e.code : "erro") + ".");
+  });
 
   onAuthStateChanged(auth, function(user){
     if (user){
