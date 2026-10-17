@@ -153,14 +153,90 @@
     <div id="rev-max"></div>
   </div>
 
+  <div class="card">
+    <h2>Cenários salvos</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+      <input type="text" id="nome-cenario" placeholder="Nome do cenário" style="flex:1;min-width:160px;height:38px;padding:0 12px;font-size:14px;border:0.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);" />
+      <button id="salvar-cenario" style="height:38px;padding:0 16px;font-size:14px;border:none;border-radius:8px;background:var(--green);color:#fff;cursor:pointer;">Salvar este cenário</button>
+    </div>
+    <div id="lista-cenarios"></div>
+    <div id="status-nuvem" style="font-size:12px;color:var(--muted);margin-top:12px;"></div>
+  </div>
+
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDATA9W9seG4vtEjjQpfVpKxJX5XI4_OS4",
+  authDomain: "calculadora-f9570.firebaseapp.com",
+  projectId: "calculadora-f9570",
+  storageBucket: "calculadora-f9570.firebasestorage.app",
+  messagingSenderId: "277728766658",
+  appId: "1:277728766658:web:54a966f441fa8dda35e95b"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
 (function(){
   var fmt = function(n){ return "R$ " + Math.round(n).toLocaleString("pt-BR"); };
   function val(id){ var v = parseFloat(document.getElementById(id).value); return isNaN(v) ? 0 : v; }
 
   var computado = {};
+  var carregando = true;
+
+  function statusNuvem(txt){ document.getElementById("status-nuvem").textContent = txt; }
+
+  function coletarEstado(){
+    var produtos = {};
+    document.querySelectorAll(".rev-row").forEach(function(row){
+      produtos[row.dataset.target] = {
+        preco: row.querySelector(".rev-price-in").value,
+        partes: row.querySelector(".rev-partes").value,
+        marcado: row.querySelector(".rev-check").checked
+      };
+    });
+    return {
+      meta: document.getElementById("bruto-alvo").value,
+      hencontro: document.getElementById("hencontro").value,
+      hsem: document.getElementById("hsem").value,
+      hdisp: document.getElementById("hdisp").value,
+      periodo: document.getElementById("periodo").value,
+      produtos: produtos
+    };
+  }
+
+  function aplicarEstado(e){
+    if (!e) return;
+    if (e.meta != null) document.getElementById("bruto-alvo").value = e.meta;
+    if (e.hencontro != null) document.getElementById("hencontro").value = e.hencontro;
+    if (e.hsem != null) document.getElementById("hsem").value = e.hsem;
+    if (e.hdisp != null) document.getElementById("hdisp").value = e.hdisp;
+    if (e.periodo != null) document.getElementById("periodo").value = e.periodo;
+    if (e.produtos){
+      document.querySelectorAll(".rev-row").forEach(function(row){
+        var p = e.produtos[row.dataset.target];
+        if (!p) return;
+        if (p.preco != null) row.querySelector(".rev-price-in").value = p.preco;
+        if (p.partes != null) row.querySelector(".rev-partes").value = p.partes;
+        row.querySelector(".rev-check").checked = !!p.marcado;
+      });
+    }
+  }
+
+  var timerSalvar = null;
+  function salvarConfig(){
+    if (carregando) return;
+    statusNuvem("Salvando...");
+    clearTimeout(timerSalvar);
+    timerSalvar = setTimeout(function(){
+      setDoc(doc(db, "config", "atual"), coletarEstado())
+        .then(function(){ statusNuvem("Preços salvos na nuvem."); })
+        .catch(function(){ statusNuvem("Não consegui salvar na nuvem agora."); });
+    }, 600);
+  }
 
   function calc(){
     var alvo = val("bruto-alvo");
@@ -236,25 +312,95 @@
     }
   }
 
+  function calcESalva(){ calc(); salvarConfig(); }
+
   document.querySelectorAll(".rev-check, .rev-partes, .rev-price-in").forEach(function(el){
-    el.addEventListener("input", calc);
-    el.addEventListener("change", calc);
+    el.addEventListener("input", calcESalva);
+    el.addEventListener("change", calcESalva);
   });
   var SEMANAS_MES = 4.4;
   document.getElementById("hsem").addEventListener("input", function(){
     var v = parseFloat(this.value);
     if (!isNaN(v)) document.getElementById("hdisp").value = Math.round(v * SEMANAS_MES);
-    calc();
+    calcESalva();
   });
   document.getElementById("hdisp").addEventListener("input", function(){
     var v = parseFloat(this.value);
     if (!isNaN(v)) document.getElementById("hsem").value = Math.round(v / SEMANAS_MES);
-    calc();
+    calcESalva();
   });
   ["bruto-alvo","hencontro"].forEach(function(id){
-    document.getElementById(id).addEventListener("input", calc);
+    document.getElementById(id).addEventListener("input", calcESalva);
   });
-  document.getElementById("periodo").addEventListener("change", calc);
+  document.getElementById("periodo").addEventListener("change", calcESalva);
+
+  // Cenários salvos
+  document.getElementById("salvar-cenario").addEventListener("click", function(){
+    var campo = document.getElementById("nome-cenario");
+    var nome = campo.value.trim();
+    if (!nome){ campo.focus(); statusNuvem("Dê um nome ao cenário antes de salvar."); return; }
+    var dados = coletarEstado();
+    dados.nome = nome;
+    dados.criadoEm = serverTimestamp();
+    addDoc(collection(db, "cenarios"), dados)
+      .then(function(){ campo.value = ""; statusNuvem("Cenário \"" + nome + "\" salvo."); })
+      .catch(function(){ statusNuvem("Não consegui salvar o cenário agora."); });
+  });
+
+  function renderCenarios(docs){
+    var lista = document.getElementById("lista-cenarios");
+    lista.innerHTML = "";
+    if (!docs.length){
+      lista.innerHTML = '<div style="font-size:13px;color:var(--muted);">Nenhum cenário salvo ainda.</div>';
+      return;
+    }
+    docs.forEach(function(item){
+      var linha = document.createElement("div");
+      linha.style.cssText = "display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:0.5px solid var(--line);";
+      var nome = document.createElement("span");
+      nome.textContent = item.data.nome || "Sem nome";
+      nome.style.cssText = "flex:1;font-size:14px;font-weight:600;";
+      var abrir = document.createElement("button");
+      abrir.textContent = "Abrir";
+      abrir.style.cssText = "height:32px;padding:0 12px;font-size:13px;border:0.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);cursor:pointer;";
+      abrir.addEventListener("click", function(){
+        aplicarEstado(item.data);
+        calc();
+        salvarConfig();
+        statusNuvem("Cenário \"" + (item.data.nome || "") + "\" aberto.");
+      });
+      var excluir = document.createElement("button");
+      excluir.textContent = "Excluir";
+      excluir.style.cssText = "height:32px;padding:0 12px;font-size:13px;border:0.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--red);cursor:pointer;";
+      excluir.addEventListener("click", function(){
+        deleteDoc(doc(db, "cenarios", item.id)).catch(function(){ statusNuvem("Não consegui excluir agora."); });
+      });
+      linha.appendChild(nome);
+      linha.appendChild(abrir);
+      linha.appendChild(excluir);
+      lista.appendChild(linha);
+    });
+  }
+
+  onSnapshot(query(collection(db, "cenarios"), orderBy("criadoEm", "desc")), function(snap){
+    var docs = [];
+    snap.forEach(function(d){ docs.push({ id: d.id, data: d.data() }); });
+    renderCenarios(docs);
+  }, function(){ document.getElementById("lista-cenarios").innerHTML = '<div style="font-size:13px;color:var(--red);">Não consegui carregar os cenários da nuvem.</div>'; });
+
+  // Carregar config salva ao abrir
+  statusNuvem("Carregando da nuvem...");
+  getDoc(doc(db, "config", "atual")).then(function(snap){
+    if (snap.exists()) aplicarEstado(snap.data());
+    carregando = false;
+    calc();
+    statusNuvem(snap.exists() ? "Preços carregados da nuvem." : "Começando com os preços padrão.");
+  }).catch(function(){
+    carregando = false;
+    calc();
+    statusNuvem("Abri sem a nuvem desta vez. Os preços novos ainda tentam salvar.");
+  });
+
   calc();
 })();
 </script>
