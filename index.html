@@ -240,7 +240,18 @@
     el.addEventListener("input", calc);
     el.addEventListener("change", calc);
   });
-  ["bruto-alvo","hencontro","hsem","hdisp"].forEach(function(id){
+  var SEMANAS_MES = 4.4;
+  document.getElementById("hsem").addEventListener("input", function(){
+    var v = parseFloat(this.value);
+    if (!isNaN(v)) document.getElementById("hdisp").value = Math.round(v * SEMANAS_MES);
+    calc();
+  });
+  document.getElementById("hdisp").addEventListener("input", function(){
+    var v = parseFloat(this.value);
+    if (!isNaN(v)) document.getElementById("hsem").value = Math.round(v / SEMANAS_MES);
+    calc();
+  });
+  ["bruto-alvo","hencontro"].forEach(function(id){
     document.getElementById(id).addEventListener("input", calc);
   });
   document.getElementById("periodo").addEventListener("change", calc);
