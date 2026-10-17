@@ -16,16 +16,16 @@
 <style>
   :root {
     color-scheme: light;
-    --bg: #f6f5f1; --card: #ffffff; --ink: #2c2c2a; --muted: #6b6a66;
-    --line: rgba(0,0,0,0.12); --green: #1d9e75; --green-soft: rgba(29,158,117,0.12); --red: #c0392b;
+    --bg: #eceef1; --card: #ffffff; --ink: #141414; --muted: #55554f;
+    --line: rgba(0,0,0,0.14); --green: #178a68; --green-dark: #0f6e56; --green-soft: rgba(23,138,104,0.12); --red: #c0392b;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.55; padding: 24px 16px 56px; }
   .wrap { max-width: 720px; margin: 0 auto; }
-  h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; color: var(--green-dark); }
   .sub { color: var(--muted); font-size: 14px; margin: 0 0 22px; }
   .card { background: var(--card); border: 0.5px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; }
-  .card h2 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  .card h2 { font-size: 15px; font-weight: 600; margin: 0 0 4px; color: var(--green-dark); }
   .card .card-sub { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
 
   .alvo { background: var(--green-soft); border: 1px solid var(--green); border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; }
@@ -39,14 +39,19 @@
   .rev-row:last-of-type { border-bottom: 0; }
   .rev-row.off { opacity: 0.5; }
   .rev-check { width: 18px; height: 18px; accent-color: var(--green); flex: none; }
-  .rev-name { font-size: 14px; font-weight: 600; flex: 1; min-width: 130px; }
-  .price-wrap { display: inline-flex; align-items: center; gap: 2px; border: 0.5px solid var(--line); border-radius: 8px; padding: 0 8px; height: 34px; }
+  .rev-name { font-size: 14px; font-weight: 600; flex: 0 1 auto; min-width: 120px; color: var(--ink); }
+  .price-wrap { display: inline-flex; align-items: center; gap: 2px; border: 0.5px solid var(--line); border-radius: 8px; padding: 0 8px; height: 34px; margin-left: auto; }
   .price-wrap .pre { font-size: 12px; color: var(--muted); }
   .rev-price-in { width: 62px; height: 32px; border: none; background: transparent; font-size: 14px; font-weight: 600; color: var(--ink); text-align: right; padding: 0; }
   .rev-price-in:focus { outline: none; }
-  .rev-partes-wrap { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  .rev-partes-wrap { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); margin-left: auto; }
   .rev-partes { width: 46px; height: 34px; text-align: center; border: 0.5px solid var(--line); border-radius: 8px; font-size: 14px; color: var(--ink); }
-  .rev-qty { font-size: 17px; font-weight: 700; min-width: 108px; text-align: right; }
+  .rev-qty { font-size: 17px; font-weight: 700; min-width: 108px; text-align: right; color: var(--ink); }
+
+  @media (max-width: 520px) {
+    .rev-name { flex-basis: 100%; }
+    .price-wrap { margin-left: 0; }
+  }
 
   #rev-real { font-size: 13px; color: var(--ink); margin-top: 14px; font-weight: 600; }
   #rev-max { font-size: 13px; margin-top: 6px; color: var(--muted); }
@@ -62,6 +67,14 @@
 <div class="wrap">
 
   <h1>Calculadora de produtos</h1>
+
+  <div style="display:flex;align-items:center;gap:10px;margin:0 0 18px;flex-wrap:wrap;">
+    <button id="entrar" style="display:inline-flex;align-items:center;height:38px;padding:0 16px;font-size:14px;border:0.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);cursor:pointer;">Entrar com o Google</button>
+    <div id="conta-logada" style="display:none;align-items:center;gap:10px;">
+      <span id="conta-email" style="font-size:13px;color:var(--muted);"></span>
+      <button id="sair" style="height:34px;padding:0 12px;font-size:13px;border:0.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);cursor:pointer;">Sair</button>
+    </div>
+  </div>
 
   <div class="alvo">
     <div class="alvo-label">Faturamento bruto no mês</div>
@@ -168,6 +181,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDATA9W9seG4vtEjjQpfVpKxJX5XI4_OS4",
@@ -226,13 +240,14 @@ const db = getFirestore(fbApp);
     }
   }
 
+  var uid = null;
   var timerSalvar = null;
   function salvarConfig(){
-    if (carregando) return;
+    if (carregando || !uid) return;
     statusNuvem("Salvando...");
     clearTimeout(timerSalvar);
     timerSalvar = setTimeout(function(){
-      setDoc(doc(db, "config", "atual"), coletarEstado())
+      setDoc(doc(db, "usuarios", uid), coletarEstado())
         .then(function(){ statusNuvem("Preços salvos na nuvem."); })
         .catch(function(){ statusNuvem("Não consegui salvar na nuvem agora."); });
     }, 600);
@@ -336,13 +351,14 @@ const db = getFirestore(fbApp);
 
   // Cenários salvos
   document.getElementById("salvar-cenario").addEventListener("click", function(){
+    if (!uid){ statusNuvem("Entre com o Google para salvar."); return; }
     var campo = document.getElementById("nome-cenario");
     var nome = campo.value.trim();
     if (!nome){ campo.focus(); statusNuvem("Dê um nome ao cenário antes de salvar."); return; }
     var dados = coletarEstado();
     dados.nome = nome;
     dados.criadoEm = serverTimestamp();
-    addDoc(collection(db, "cenarios"), dados)
+    addDoc(collection(db, "usuarios", uid, "cenarios"), dados)
       .then(function(){ campo.value = ""; statusNuvem("Cenário \"" + nome + "\" salvo."); })
       .catch(function(){ statusNuvem("Não consegui salvar o cenário agora."); });
   });
@@ -373,7 +389,8 @@ const db = getFirestore(fbApp);
       excluir.textContent = "Excluir";
       excluir.style.cssText = "height:32px;padding:0 12px;font-size:13px;border:0.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--red);cursor:pointer;";
       excluir.addEventListener("click", function(){
-        deleteDoc(doc(db, "cenarios", item.id)).catch(function(){ statusNuvem("Não consegui excluir agora."); });
+        if (!uid) return;
+        deleteDoc(doc(db, "usuarios", uid, "cenarios", item.id)).catch(function(){ statusNuvem("Não consegui excluir agora."); });
       });
       linha.appendChild(nome);
       linha.appendChild(abrir);
@@ -382,23 +399,58 @@ const db = getFirestore(fbApp);
     });
   }
 
-  onSnapshot(query(collection(db, "cenarios"), orderBy("criadoEm", "desc")), function(snap){
-    var docs = [];
-    snap.forEach(function(d){ docs.push({ id: d.id, data: d.data() }); });
-    renderCenarios(docs);
-  }, function(){ document.getElementById("lista-cenarios").innerHTML = '<div style="font-size:13px;color:var(--red);">Não consegui carregar os cenários da nuvem.</div>'; });
+  var pararCenarios = null;
+  function assinarCenarios(){
+    if (pararCenarios){ pararCenarios(); pararCenarios = null; }
+    pararCenarios = onSnapshot(query(collection(db, "usuarios", uid, "cenarios"), orderBy("criadoEm", "desc")), function(snap){
+      var docs = [];
+      snap.forEach(function(d){ docs.push({ id: d.id, data: d.data() }); });
+      renderCenarios(docs);
+    }, function(){ document.getElementById("lista-cenarios").innerHTML = '<div style="font-size:13px;color:var(--red);">Não consegui carregar os cenários da nuvem.</div>'; });
+  }
 
-  // Carregar config salva ao abrir
-  statusNuvem("Carregando da nuvem...");
-  getDoc(doc(db, "config", "atual")).then(function(snap){
-    if (snap.exists()) aplicarEstado(snap.data());
-    carregando = false;
-    calc();
-    statusNuvem(snap.exists() ? "Preços carregados da nuvem." : "Começando com os preços padrão.");
-  }).catch(function(){
-    carregando = false;
-    calc();
-    statusNuvem("Abri sem a nuvem desta vez. Os preços novos ainda tentam salvar.");
+  function carregarConfig(){
+    statusNuvem("Carregando da nuvem...");
+    getDoc(doc(db, "usuarios", uid)).then(function(snap){
+      if (snap.exists()) aplicarEstado(snap.data());
+      carregando = false;
+      calc();
+      statusNuvem(snap.exists() ? "Preços carregados da nuvem." : "Começando com os preços padrão.");
+    }).catch(function(){
+      carregando = false;
+      calc();
+      statusNuvem("Abri sem a nuvem desta vez. Os preços novos ainda tentam salvar.");
+    });
+  }
+
+  // Login com o Google
+  var auth = getAuth(fbApp);
+  var provider = new GoogleAuthProvider();
+  setPersistence(auth, browserLocalPersistence);
+
+  document.getElementById("entrar").addEventListener("click", function(){
+    signInWithPopup(auth, provider).catch(function(){ statusNuvem("Não consegui entrar agora. Tente de novo."); });
+  });
+  document.getElementById("sair").addEventListener("click", function(){ signOut(auth); });
+
+  onAuthStateChanged(auth, function(user){
+    if (user){
+      uid = user.uid;
+      document.getElementById("entrar").style.display = "none";
+      document.getElementById("conta-logada").style.display = "flex";
+      document.getElementById("conta-email").textContent = user.email || "conectada";
+      carregando = true;
+      carregarConfig();
+      assinarCenarios();
+    } else {
+      uid = null;
+      if (pararCenarios){ pararCenarios(); pararCenarios = null; }
+      document.getElementById("entrar").style.display = "inline-flex";
+      document.getElementById("conta-logada").style.display = "none";
+      document.getElementById("lista-cenarios").innerHTML = "";
+      carregando = false;
+      statusNuvem("Entre com o Google para salvar e sincronizar entre aparelhos.");
+    }
   });
 
   calc();
