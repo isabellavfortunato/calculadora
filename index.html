@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Calculadora de produtos</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f6f5f1; --card: #ffffff; --ink: #2c2c2a; --muted: #6b6a66;
+    --line: rgba(0,0,0,0.12); --green: #1d9e75; --green-soft: rgba(29,158,117,0.12); --red: #c0392b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.55; padding: 24px 16px 56px; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0 0 22px; }
+  .card { background: var(--card); border: 0.5px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; }
+  .card h2 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  .card .card-sub { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
+
+  .alvo { background: var(--green-soft); border: 1px solid var(--green); border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; }
+  .alvo-label { font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+  .alvo-input-wrap { display: flex; align-items: baseline; gap: 6px; }
+  .alvo-input-wrap .pre { font-size: 26px; font-weight: 600; color: var(--muted); }
+  #bruto-alvo { width: 100%; border: none; background: transparent; font-size: 34px; font-weight: 700; color: var(--ink); padding: 0; }
+  #bruto-alvo:focus { outline: none; }
+
+  .rev-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 0.5px solid var(--line); flex-wrap: wrap; }
+  .rev-row:last-of-type { border-bottom: 0; }
+  .rev-row.off { opacity: 0.5; }
+  .rev-check { width: 18px; height: 18px; accent-color: var(--green); flex: none; }
+  .rev-name { font-size: 14px; font-weight: 600; flex: 1; min-width: 130px; }
+  .price-wrap { display: inline-flex; align-items: center; gap: 2px; border: 0.5px solid var(--line); border-radius: 8px; padding: 0 8px; height: 34px; }
+  .price-wrap .pre { font-size: 12px; color: var(--muted); }
+  .rev-price-in { width: 62px; height: 32px; border: none; background: transparent; font-size: 14px; font-weight: 600; color: var(--ink); text-align: right; padding: 0; }
+  .rev-price-in:focus { outline: none; }
+  .rev-partes-wrap { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  .rev-partes { width: 46px; height: 34px; text-align: center; border: 0.5px solid var(--line); border-radius: 8px; font-size: 14px; color: var(--ink); }
+  .rev-qty { font-size: 17px; font-weight: 700; min-width: 108px; text-align: right; }
+
+  #rev-real { font-size: 13px; color: var(--ink); margin-top: 14px; font-weight: 600; }
+  #rev-max { font-size: 13px; margin-top: 6px; color: var(--muted); }
+
+  .params { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+  .field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .field input { width: 100%; height: 36px; padding: 0 10px; font-size: 14px; border: 0.5px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); }
+  .reset { margin-top: 4px; height: 36px; padding: 0 14px; font-size: 14px; border: 0.5px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); cursor: pointer; }
+  .foot { font-size: 13px; color: var(--muted); margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Calculadora de produtos</h1>
+
+  <div class="alvo">
+    <div class="alvo-label">Faturamento bruto no mês</div>
+    <div class="alvo-input-wrap"><span class="pre">R$</span><input id="bruto-alvo" type="number" value="50000" min="0" step="500" /></div>
+  </div>
+
+  <div class="card">
+    <h2>Capacidade de atendimento</h2>
+    <div class="params">
+      <div class="field"><label>Horas por encontro</label><input type="number" id="hencontro" value="2" min="0.5" step="0.5" /></div>
+      <div class="field"><label>Horas disponíveis no mês</label><input type="number" id="hdisp" value="176" min="1" step="1" /></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Quanto vender de cada produto</h2>
+
+    <div class="rev-row off" data-target="cons" data-tempo="1">
+      <input type="checkbox" class="rev-check" /><span class="rev-name">Consultoria</span>
+      <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="697" min="0" /></span>
+      <span class="rev-partes-wrap">partes <input type="number" class="rev-partes" value="1" min="0" step="1" /></span>
+      <span class="rev-qty"></span>
+    </div>
+    <div class="rev-row off" data-target="m3" data-tempo="1" data-mentoria="1">
+      <input type="checkbox" class="rev-check" /><span class="rev-name">Mentoria 3 meses</span>
+      <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="3500" min="0" /></span>
+      <span class="rev-partes-wrap">partes <input type="number" class="rev-partes" value="1" min="0" step="1" /></span>
+      <span class="rev-qty"></span>
+    </div>
+    <div class="rev-row off" data-target="m6" data-tempo="1" data-mentoria="1">
+      <input type="checkbox" class="rev-check" /><span class="rev-name">Mentoria 6 meses</span>
+      <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="7500" min="0" /></span>
+      <span class="rev-partes-wrap">partes <input type="number" class="rev-partes" value="1" min="0" step="1" /></span>
+      <span class="rev-qty"></span>
+    </div>
+    <div class="rev-row off" data-target="cmia" data-tempo="1">
+      <input type="checkbox" class="rev-check" /><span class="rev-name">Consultoria Mia</span>
+      <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="" min="0" placeholder="preço" /></span>
+      <span class="rev-partes-wrap">partes <input type="number" class="rev-partes" value="1" min="0" step="1" /></span>
+      <span class="rev-qty"></span>
+    </div>
+    <div class="rev-row off" data-target="fsm">
+      <input type="checkbox" class="rev-check" /><span class="rev-name">Ferramenta Sob Medida</span>
+      <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="" min="0" placeholder="preço" /></span>
+      <span class="rev-partes-wrap">partes <input type="number" class="rev-partes" value="1" min="0" step="1" /></span>
+      <span class="rev-qty"></span>
+    </div>
+    <div class="rev-row off" data-target="c1">
+      <input type="checkbox" class="rev-check" /><span class="rev-name">Curso de entrada 1</span>
+      <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="97" min="0" /></span>
+      <span class="rev-partes-wrap">partes <input type="number" class="rev-partes" value="1" min="0" step="1" /></span>
+      <span class="rev-qty"></span>
+    </div>
+    <div class="rev-row off" data-target="c2">
+      <input type="checkbox" class="rev-check" /><span class="rev-name">Curso de entrada 2</span>
+      <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="197" min="0" /></span>
+      <span class="rev-partes-wrap">partes <input type="number" class="rev-partes" value="1" min="0" step="1" /></span>
+      <span class="rev-qty"></span>
+    </div>
+    <div class="rev-row off" data-target="c3">
+      <input type="checkbox" class="rev-check" /><span class="rev-name">Curso de entrada 3</span>
+      <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="197" min="0" /></span>
+      <span class="rev-partes-wrap">partes <input type="number" class="rev-partes" value="1" min="0" step="1" /></span>
+      <span class="rev-qty"></span>
+    </div>
+    <div class="rev-row off" data-target="enc">
+      <input type="checkbox" class="rev-check" /><span class="rev-name">Encontros de networking</span>
+      <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="150" min="0" /></span>
+      <span class="rev-partes-wrap">partes <input type="number" class="rev-partes" value="1" min="0" step="1" /></span>
+      <span class="rev-qty"></span>
+    </div>
+    <div class="rev-row off" data-target="ades">
+      <input type="checkbox" class="rev-check" /><span class="rev-name">Adesão de networking</span>
+      <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="1200" min="0" /></span>
+      <span class="rev-partes-wrap">partes <input type="number" class="rev-partes" value="1" min="0" step="1" /></span>
+      <span class="rev-qty"></span>
+    </div>
+
+    <div id="rev-real"></div>
+    <div id="rev-max"></div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var fmt = function(n){ return "R$ " + Math.round(n).toLocaleString("pt-BR"); };
+  function val(id){ var v = parseFloat(document.getElementById(id).value); return isNaN(v) ? 0 : v; }
+
+  var computado = {};
+
+  function calc(){
+    var alvo = val("bruto-alvo");
+    var hEncontro = val("hencontro");
+    var hLives = 0;
+    var hDisp = val("hdisp");
+
+    var soma = 0;
+    document.querySelectorAll(".rev-row").forEach(function(row){
+      if (row.querySelector(".rev-check").checked) {
+        var p = parseFloat(row.querySelector(".rev-partes").value);
+        if (isNaN(p) || p < 0) p = 0;
+        soma += p;
+      }
+    });
+
+    computado = {};
+    var realizado = 0;
+    document.querySelectorAll(".rev-row").forEach(function(row){
+      var marcado = row.querySelector(".rev-check").checked;
+      row.classList.toggle("off", !marcado);
+      var preco = parseFloat(row.querySelector(".rev-price-in").value) || 0;
+      var out = row.querySelector(".rev-qty");
+      if (marcado && soma > 0 && preco > 0) {
+        var p = parseFloat(row.querySelector(".rev-partes").value) || 0;
+        var parcela = alvo * p / soma;
+        var q = Math.ceil(parcela / preco);
+        computado[row.dataset.target] = q;
+        realizado += q * preco;
+        out.textContent = q + (q === 1 ? " venda" : " vendas");
+      } else {
+        out.textContent = marcado ? "—" : "";
+      }
+    });
+
+    var algum = Object.keys(computado).length > 0;
+    document.getElementById("rev-real").textContent = algum
+      ? "Vendendo isso você fatura cerca de " + fmt(realizado) + " no mês."
+      : "Marque ao menos um produto para calcular.";
+
+    var somaAtend = 0, temMentoria = false;
+    Object.keys(computado).forEach(function(id){
+      var row = document.querySelector('.rev-row[data-target="' + id + '"]');
+      if (row.dataset.tempo === "1") somaAtend += computado[id];
+      if (row.dataset.mentoria === "1") temMentoria = true;
+    });
+    var horasLivres = hDisp - (temMentoria ? hLives : 0);
+    var maxAtend = hEncontro > 0 ? Math.floor(horasLivres / hEncontro) : 0;
+    if (maxAtend < 0) maxAtend = 0;
+
+    var elMax = document.getElementById("rev-max");
+    if (!algum) {
+      elMax.textContent = "";
+    } else if (somaAtend === 0) {
+      elMax.textContent = "Esse plano não ocupa atendimento individual. Você ainda poderia atender até " + maxAtend + " clientes no mês.";
+      elMax.style.color = "var(--muted)";
+    } else if (somaAtend > maxAtend) {
+      elMax.textContent = "Esse plano pede " + somaAtend + " atendimentos individuais, acima do máximo de " + maxAtend + " no mês. Não cabe na sua agenda com esses preços.";
+      elMax.style.color = "var(--red)";
+    } else {
+      elMax.textContent = "Esse plano ocupa " + somaAtend + " dos " + maxAtend + " atendimentos individuais possíveis no mês.";
+      elMax.style.color = "var(--muted)";
+    }
+  }
+
+  document.querySelectorAll(".rev-check, .rev-partes, .rev-price-in").forEach(function(el){
+    el.addEventListener("input", calc);
+    el.addEventListener("change", calc);
+  });
+  ["bruto-alvo","hencontro","hdisp"].forEach(function(id){
+    document.getElementById(id).addEventListener("input", calc);
+  });
+  calc();
+})();
+</script>
+</body>
+</html>
