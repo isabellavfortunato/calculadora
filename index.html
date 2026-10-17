@@ -72,12 +72,21 @@
     <h2>Capacidade de atendimento</h2>
     <div class="params">
       <div class="field"><label>Horas por encontro</label><input type="number" id="hencontro" value="2" min="0.5" step="0.5" /></div>
+      <div class="field"><label>Horas disponíveis por semana</label><input type="number" id="hsem" value="40" min="1" step="1" /></div>
       <div class="field"><label>Horas disponíveis no mês</label><input type="number" id="hdisp" value="176" min="1" step="1" /></div>
     </div>
   </div>
 
   <div class="card">
     <h2>Quanto vender de cada produto</h2>
+    <div style="display:flex;align-items:center;gap:10px;margin:0 0 16px;font-size:13px;color:var(--muted);">
+      <span>Ver vendas por</span>
+      <select id="periodo" style="height:34px;border:0.5px solid var(--line);border-radius:8px;padding:0 8px;font-size:14px;background:var(--card);color:var(--ink);">
+        <option value="mes">Mês</option>
+        <option value="semana">Semana</option>
+        <option value="dia">Dia</option>
+      </select>
+    </div>
 
     <div class="rev-row off" data-target="cons" data-tempo="1">
       <input type="checkbox" class="rev-check" /><span class="rev-name">Consultoria</span>
@@ -158,6 +167,10 @@
     var hEncontro = val("hencontro");
     var hLives = 0;
     var hDisp = val("hdisp");
+    var hSem = val("hsem");
+    var periodo = document.getElementById("periodo").value;
+    var semanasMes = (hDisp > 0 && hSem > 0) ? hDisp / hSem : 4.33;
+    var diasSemana = 5;
 
     var soma = 0;
     document.querySelectorAll(".rev-row").forEach(function(row){
@@ -181,7 +194,13 @@
         var q = Math.ceil(parcela / preco);
         computado[row.dataset.target] = q;
         realizado += q * preco;
-        out.textContent = q + (q === 1 ? " venda" : " vendas");
+        if (periodo === "semana") {
+          out.textContent = (q / semanasMes).toLocaleString("pt-BR", {minimumFractionDigits:1, maximumFractionDigits:1}) + " por semana";
+        } else if (periodo === "dia") {
+          out.textContent = (q / semanasMes / diasSemana).toLocaleString("pt-BR", {minimumFractionDigits:1, maximumFractionDigits:1}) + " por dia";
+        } else {
+          out.textContent = (q === 1 ? "uma venda" : q + " vendas");
+        }
       } else {
         out.textContent = marcado ? "—" : "";
       }
@@ -221,9 +240,10 @@
     el.addEventListener("input", calc);
     el.addEventListener("change", calc);
   });
-  ["bruto-alvo","hencontro","hdisp"].forEach(function(id){
+  ["bruto-alvo","hencontro","hsem","hdisp"].forEach(function(id){
     document.getElementById(id).addEventListener("input", calc);
   });
+  document.getElementById("periodo").addEventListener("change", calc);
   calc();
 })();
 </script>
