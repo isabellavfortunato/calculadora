@@ -69,12 +69,14 @@
   .modo-toggle button { border: none; background: transparent; color: var(--muted); font-size: 13px; padding: 8px 16px; border-radius: 999px; cursor: pointer; }
   .modo-toggle button.ativo { background: var(--green); color: #fff; }
 
-  .qcell { justify-self: end; }
-  .rev-vendas { display: none; width: 72px; height: 34px; text-align: center; border: 0.5px solid var(--line); border-radius: 8px; font-size: 14px; color: var(--ink); background: var(--card); }
+  .qcell { display: inline-flex; align-items: center; gap: 6px; justify-self: end; width: 100%; justify-content: flex-end; }
+  .rev-vendas { display: none; width: 68px; height: 34px; text-align: center; border: 0.5px solid var(--line); border-radius: 8px; font-size: 14px; color: var(--ink); background: var(--card); }
+  .btn-max { display: none; height: 30px; padding: 0 9px; font-size: 12px; border: 0.5px solid var(--line); border-radius: 6px; background: var(--card); color: var(--green-dark); cursor: pointer; }
   .modo-vendas .rev-qty { display: none; }
   .modo-vendas .rev-vendas { display: inline-block; }
   .modo-vendas .rev-check { display: none; }
-  .modo-vendas .rev-row { grid-template-columns: 1fr auto 96px; }
+  .modo-vendas .rev-row[data-tempo="1"] .btn-max { display: inline-block; }
+  .modo-vendas .rev-row { grid-template-columns: 1fr auto 150px; }
   .modo-vendas #bruto-alvo { color: var(--green-dark); }
 </style>
 </head>
@@ -380,6 +382,26 @@
 
   document.getElementById("modo-meta").addEventListener("click", function(){ trocarModo("meta"); });
   document.getElementById("modo-vendas").addEventListener("click", function(){ trocarModo("vendas"); });
+
+  // Botão "máx" nos produtos de atendimento: lota a agenda com aquele produto
+  document.querySelectorAll('.rev-row[data-tempo="1"]').forEach(function(row){
+    var qcell = row.querySelector(".qcell");
+    var campoV = row.querySelector(".rev-vendas");
+    if (!qcell || !campoV) return;
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn-max";
+    btn.textContent = "máx";
+    qcell.insertBefore(btn, campoV);
+    btn.addEventListener("click", function(){
+      var hEnc = val("hencontro");
+      var hD = val("hdisp");
+      var maxA = hEnc > 0 ? Math.floor(hD / hEnc) : 0;
+      if (maxA < 0) maxA = 0;
+      campoV.value = maxA;
+      calcESalva();
+    });
+  });
 
   document.querySelectorAll(".rev-check, .rev-partes, .rev-price-in, .rev-vendas").forEach(function(el){
     el.addEventListener("input", calcESalva);
