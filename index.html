@@ -64,6 +64,18 @@
   .field input { width: 100%; height: 36px; padding: 0 10px; font-size: 14px; border: 0.5px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); }
   .reset { margin-top: 4px; height: 36px; padding: 0 14px; font-size: 14px; border: 0.5px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); cursor: pointer; }
   .foot { font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+  .modo-toggle { display: inline-flex; border: 0.5px solid var(--line); border-radius: 999px; padding: 3px; gap: 3px; margin: 0 0 18px; background: var(--card); }
+  .modo-toggle button { border: none; background: transparent; color: var(--muted); font-size: 13px; padding: 8px 16px; border-radius: 999px; cursor: pointer; }
+  .modo-toggle button.ativo { background: var(--green); color: #fff; }
+
+  .qcell { justify-self: end; }
+  .rev-vendas { display: none; width: 72px; height: 34px; text-align: center; border: 0.5px solid var(--line); border-radius: 8px; font-size: 14px; color: var(--ink); background: var(--card); }
+  .modo-vendas .rev-qty { display: none; }
+  .modo-vendas .rev-vendas { display: inline-block; }
+  .modo-vendas .rev-check { display: none; }
+  .modo-vendas .rev-row { grid-template-columns: 1fr auto 96px; }
+  .modo-vendas #bruto-alvo { color: var(--green-dark); }
 </style>
 </head>
 <body>
@@ -79,8 +91,13 @@
     </div>
   </div>
 
+  <div class="modo-toggle">
+    <button type="button" id="modo-meta" class="ativo">Quero faturar</button>
+    <button type="button" id="modo-vendas">Vou vender</button>
+  </div>
+
   <div class="alvo">
-    <div class="alvo-label">Faturamento bruto no mês</div>
+    <div class="alvo-label" id="alvo-label">Faturamento bruto no mês</div>
     <div class="alvo-input-wrap"><span class="pre">R$</span><input id="bruto-alvo" type="number" value="50000" min="0" step="500" /></div>
   </div>
 
@@ -107,52 +124,52 @@
     <div class="rev-row off" data-target="cons" data-tempo="1">
       <input type="checkbox" class="rev-check" /><span class="rev-name">Consultoria</span>
       <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="697" min="0" /></span>
-      <span class="rev-qty"></span>
+      <span class="qcell"><span class="rev-qty"></span><input type="number" class="rev-vendas" min="0" step="1" placeholder="0" /></span>
     </div>
     <div class="rev-row off" data-target="m3" data-tempo="1" data-mentoria="1">
       <input type="checkbox" class="rev-check" /><span class="rev-name">Mentoria 3 meses</span>
       <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="3500" min="0" /></span>
-      <span class="rev-qty"></span>
+      <span class="qcell"><span class="rev-qty"></span><input type="number" class="rev-vendas" min="0" step="1" placeholder="0" /></span>
     </div>
     <div class="rev-row off" data-target="m6" data-tempo="1" data-mentoria="1">
       <input type="checkbox" class="rev-check" /><span class="rev-name">Mentoria 6 meses</span>
       <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="7500" min="0" /></span>
-      <span class="rev-qty"></span>
+      <span class="qcell"><span class="rev-qty"></span><input type="number" class="rev-vendas" min="0" step="1" placeholder="0" /></span>
     </div>
     <div class="rev-row off" data-target="cmia" data-tempo="1">
       <input type="checkbox" class="rev-check" /><span class="rev-name">Consultoria Mia</span>
       <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="" min="0" placeholder="preço" /></span>
-      <span class="rev-qty"></span>
+      <span class="qcell"><span class="rev-qty"></span><input type="number" class="rev-vendas" min="0" step="1" placeholder="0" /></span>
     </div>
     <div class="rev-row off" data-target="fsm">
       <input type="checkbox" class="rev-check" /><span class="rev-name">Ferramenta Sob Medida</span>
       <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="" min="0" placeholder="preço" /></span>
-      <span class="rev-qty"></span>
+      <span class="qcell"><span class="rev-qty"></span><input type="number" class="rev-vendas" min="0" step="1" placeholder="0" /></span>
     </div>
     <div class="rev-row off" data-target="c1">
       <input type="checkbox" class="rev-check" /><span class="rev-name">Curso de entrada 1</span>
       <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="97" min="0" /></span>
-      <span class="rev-qty"></span>
+      <span class="qcell"><span class="rev-qty"></span><input type="number" class="rev-vendas" min="0" step="1" placeholder="0" /></span>
     </div>
     <div class="rev-row off" data-target="c2">
       <input type="checkbox" class="rev-check" /><span class="rev-name">Curso de entrada 2</span>
       <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="197" min="0" /></span>
-      <span class="rev-qty"></span>
+      <span class="qcell"><span class="rev-qty"></span><input type="number" class="rev-vendas" min="0" step="1" placeholder="0" /></span>
     </div>
     <div class="rev-row off" data-target="c3">
       <input type="checkbox" class="rev-check" /><span class="rev-name">Curso de entrada 3</span>
       <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="197" min="0" /></span>
-      <span class="rev-qty"></span>
+      <span class="qcell"><span class="rev-qty"></span><input type="number" class="rev-vendas" min="0" step="1" placeholder="0" /></span>
     </div>
     <div class="rev-row off" data-target="enc">
       <input type="checkbox" class="rev-check" /><span class="rev-name">Encontros de networking</span>
       <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="150" min="0" /></span>
-      <span class="rev-qty"></span>
+      <span class="qcell"><span class="rev-qty"></span><input type="number" class="rev-vendas" min="0" step="1" placeholder="0" /></span>
     </div>
     <div class="rev-row off" data-target="ades">
       <input type="checkbox" class="rev-check" /><span class="rev-name">Adesão de networking</span>
       <span class="price-wrap"><span class="pre">R$</span><input type="number" class="rev-price-in" value="1200" min="0" /></span>
-      <span class="rev-qty"></span>
+      <span class="qcell"><span class="rev-qty"></span><input type="number" class="rev-vendas" min="0" step="1" placeholder="0" /></span>
     </div>
 
     <div id="rev-real"></div>
@@ -186,13 +203,16 @@
     var produtos = {};
     document.querySelectorAll(".rev-row").forEach(function(row){
       var campoP = row.querySelector(".rev-partes");
+      var campoV = row.querySelector(".rev-vendas");
       produtos[row.dataset.target] = {
         preco: row.querySelector(".rev-price-in").value,
         partes: campoP ? campoP.value : "1",
+        vendas: campoV ? campoV.value : "",
         marcado: row.querySelector(".rev-check").checked
       };
     });
     return {
+      modo: document.body.classList.contains("modo-vendas") ? "vendas" : "meta",
       meta: document.getElementById("bruto-alvo").value,
       hencontro: document.getElementById("hencontro").value,
       hsem: document.getElementById("hsem").value,
@@ -216,9 +236,12 @@
         if (p.preco != null) row.querySelector(".rev-price-in").value = p.preco;
         var campoP = row.querySelector(".rev-partes");
         if (campoP && p.partes != null) campoP.value = p.partes;
+        var campoV = row.querySelector(".rev-vendas");
+        if (campoV && p.vendas != null) campoV.value = p.vendas;
         row.querySelector(".rev-check").checked = !!p.marcado;
       });
     }
+    if (e.modo != null) aplicarModo(e.modo);
   }
 
   function calc(){
@@ -229,6 +252,40 @@
     var periodo = document.getElementById("periodo").value;
     var semanasMes = (hDisp > 0 && hSem > 0) ? hDisp / hSem : 4.4;
     var diasSemana = 5;
+    var maxAtendGeral = hEncontro > 0 ? Math.floor(hDisp / hEncontro) : 0;
+    if (maxAtendGeral < 0) maxAtendGeral = 0;
+
+    if (document.body.classList.contains("modo-vendas")) {
+      var brutoV = 0, atendV = 0, temVenda = false;
+      document.querySelectorAll(".rev-row").forEach(function(row){
+        var preco = parseFloat(row.querySelector(".rev-price-in").value) || 0;
+        var campoV = row.querySelector(".rev-vendas");
+        var v = campoV ? parseInt(campoV.value, 10) : 0;
+        if (isNaN(v) || v < 0) v = 0;
+        row.classList.toggle("off", !(v > 0));
+        if (v > 0) temVenda = true;
+        brutoV += v * preco;
+        if (v > 0 && row.dataset.tempo === "1") atendV += v;
+      });
+      document.getElementById("bruto-alvo").value = Math.round(brutoV);
+      document.getElementById("rev-real").textContent = temVenda
+        ? "Essas vendas somam " + fmt(brutoV) + " de faturamento no mês."
+        : "Digite quantas vendas de cada produto você quer fazer.";
+      var elMaxV = document.getElementById("rev-max");
+      if (!temVenda) {
+        elMaxV.textContent = "";
+      } else if (atendV === 0) {
+        elMaxV.textContent = "Essas vendas não ocupam atendimento individual.";
+        elMaxV.style.color = "var(--muted)";
+      } else if (atendV > maxAtendGeral) {
+        elMaxV.textContent = "Essas vendas ocupam " + atendV + " atendimentos individuais, acima do máximo de " + maxAtendGeral + " no mês. Não cabe na sua agenda.";
+        elMaxV.style.color = "var(--red)";
+      } else {
+        elMaxV.textContent = "Essas vendas ocupam " + atendV + " dos " + maxAtendGeral + " atendimentos individuais possíveis no mês.";
+        elMaxV.style.color = "var(--muted)";
+      }
+      return;
+    }
 
     function pesoDe(row){
       var campo = row.querySelector(".rev-partes");
@@ -297,7 +354,34 @@
   function notificar(){ if (!carregando && typeof aoMudar === "function"){ try { aoMudar(); } catch(e){} } }
   function calcESalva(){ calc(); notificar(); }
 
-  document.querySelectorAll(".rev-check, .rev-partes, .rev-price-in").forEach(function(el){
+  function aplicarModo(m){
+    var vendas = (m === "vendas");
+    document.body.classList.toggle("modo-vendas", vendas);
+    document.getElementById("modo-meta").classList.toggle("ativo", !vendas);
+    document.getElementById("modo-vendas").classList.toggle("ativo", vendas);
+    var alvo = document.getElementById("bruto-alvo");
+    alvo.readOnly = vendas;
+    document.getElementById("alvo-label").textContent = vendas ? "Faturamento das vendas no mês" : "Faturamento bruto no mês";
+  }
+
+  function trocarModo(m){
+    aplicarModo(m);
+    if (m === "vendas"){
+      document.querySelectorAll(".rev-row").forEach(function(row){
+        var campoV = row.querySelector(".rev-vendas");
+        if (campoV && (campoV.value === "" || campoV.value == null)){
+          var q = computado[row.dataset.target];
+          if (q) campoV.value = q;
+        }
+      });
+    }
+    calcESalva();
+  }
+
+  document.getElementById("modo-meta").addEventListener("click", function(){ trocarModo("meta"); });
+  document.getElementById("modo-vendas").addEventListener("click", function(){ trocarModo("vendas"); });
+
+  document.querySelectorAll(".rev-check, .rev-partes, .rev-price-in, .rev-vendas").forEach(function(el){
     el.addEventListener("input", calcESalva);
     el.addEventListener("change", calcESalva);
   });
