@@ -69,14 +69,8 @@
   .modo-toggle button { border: none; background: transparent; color: var(--muted); font-size: 13px; padding: 8px 16px; border-radius: 999px; cursor: pointer; }
   .modo-toggle button.ativo { background: var(--green); color: #fff; }
 
-  .qcell { display: inline-flex; align-items: center; gap: 6px; justify-self: end; width: 100%; justify-content: flex-end; }
-  .rev-vendas { display: none; width: 68px; height: 34px; text-align: center; border: 0.5px solid var(--line); border-radius: 8px; font-size: 14px; color: var(--ink); background: var(--card); }
-  .btn-max { display: none; height: 30px; padding: 0 9px; font-size: 12px; border: 0.5px solid var(--line); border-radius: 6px; background: var(--card); color: var(--green-dark); cursor: pointer; }
-  .modo-vendas .rev-qty { display: none; }
-  .modo-vendas .rev-vendas { display: inline-block; }
-  .modo-vendas .rev-check { display: none; }
-  .modo-vendas .rev-row[data-tempo="1"] .btn-max { display: inline-block; }
-  .modo-vendas .rev-row { grid-template-columns: 1fr auto 150px; }
+  .qcell { justify-self: end; }
+  .rev-vendas { display: none; }
   .modo-vendas #bruto-alvo { color: var(--green-dark); }
 </style>
 </head>
@@ -254,36 +248,48 @@
     var periodo = document.getElementById("periodo").value;
     var semanasMes = (hDisp > 0 && hSem > 0) ? hDisp / hSem : 4.4;
     var diasSemana = 5;
-    var maxAtendGeral = hEncontro > 0 ? Math.floor(hDisp / hEncontro) : 0;
-    if (maxAtendGeral < 0) maxAtendGeral = 0;
-
     if (document.body.classList.contains("modo-vendas")) {
-      var brutoV = 0, atendV = 0, temVenda = false;
+      var maxMes = hEncontro > 0 ? Math.floor(hDisp / hEncontro) : 0;
+      var maxSem = hEncontro > 0 ? Math.floor(hSem / hEncontro) : 0;
+      var maxDia = hEncontro > 0 ? Math.floor((hSem / diasSemana) / hEncontro) : 0;
+      if (maxMes < 0) maxMes = 0;
+      var brutoV = 0, atendV = 0, temAtivo = false, temAtend = false, temDigital = false;
       document.querySelectorAll(".rev-row").forEach(function(row){
+        var marcado = row.querySelector(".rev-check").checked;
+        row.classList.toggle("off", !marcado);
         var preco = parseFloat(row.querySelector(".rev-price-in").value) || 0;
-        var campoV = row.querySelector(".rev-vendas");
-        var v = campoV ? parseInt(campoV.value, 10) : 0;
-        if (isNaN(v) || v < 0) v = 0;
-        row.classList.toggle("off", !(v > 0));
-        if (v > 0) temVenda = true;
-        brutoV += v * preco;
-        if (v > 0 && row.dataset.tempo === "1") atendV += v;
+        var out = row.querySelector(".rev-qty");
+        if (!marcado) { if (out) out.textContent = ""; return; }
+        temAtivo = true;
+        if (row.dataset.tempo === "1") {
+          temAtend = true;
+          brutoV += maxMes * preco;
+          atendV += maxMes;
+          if (out) {
+            out.style.color = "var(--ink)";
+            if (periodo === "semana") out.textContent = maxSem + " por semana";
+            else if (periodo === "dia") out.textContent = maxDia + " por dia";
+            else out.textContent = (maxMes === 1 ? "uma venda" : maxMes + " vendas");
+          }
+        } else {
+          temDigital = true;
+          if (out) { out.textContent = "livre"; out.style.color = "var(--muted)"; }
+        }
       });
       document.getElementById("bruto-alvo").value = Math.round(brutoV);
-      document.getElementById("rev-real").textContent = temVenda
-        ? "Essas vendas somam " + fmt(brutoV) + " de faturamento no mês."
-        : "Digite quantas vendas de cada produto você quer fazer.";
+      var real = document.getElementById("rev-real");
+      if (!temAtivo) real.textContent = "Marque os produtos que você quer vender.";
+      else if (temAtend) real.textContent = "Lotando a agenda com isso você fatura " + fmt(brutoV) + " no mês.";
+      else real.textContent = "Esses produtos não dependem da sua agenda, então o faturamento depende de quantos você vender.";
       var elMaxV = document.getElementById("rev-max");
-      if (!temVenda) {
-        elMaxV.textContent = "";
-      } else if (atendV === 0) {
-        elMaxV.textContent = "Essas vendas não ocupam atendimento individual.";
+      if (!temAtend) {
+        elMaxV.textContent = temDigital ? "Produtos sem limite de horas não ocupam a sua agenda." : "";
         elMaxV.style.color = "var(--muted)";
-      } else if (atendV > maxAtendGeral) {
-        elMaxV.textContent = "Essas vendas ocupam " + atendV + " atendimentos individuais, acima do máximo de " + maxAtendGeral + " no mês. Não cabe na sua agenda.";
+      } else if (atendV > maxMes) {
+        elMaxV.textContent = "Você marcou mais de um produto de atendimento, e juntos passam da sua agenda. Marque um por vez para ver o potencial de cada um.";
         elMaxV.style.color = "var(--red)";
       } else {
-        elMaxV.textContent = "Essas vendas ocupam " + atendV + " dos " + maxAtendGeral + " atendimentos individuais possíveis no mês.";
+        elMaxV.textContent = "Isso usa " + atendV + " dos " + maxMes + " atendimentos possíveis no mês, a sua agenda cheia.";
         elMaxV.style.color = "var(--muted)";
       }
       return;
@@ -368,42 +374,13 @@
 
   function trocarModo(m){
     aplicarModo(m);
-    if (m === "vendas"){
-      document.querySelectorAll(".rev-row").forEach(function(row){
-        var campoV = row.querySelector(".rev-vendas");
-        if (campoV && (campoV.value === "" || campoV.value == null)){
-          var q = computado[row.dataset.target];
-          if (q) campoV.value = q;
-        }
-      });
-    }
     calcESalva();
   }
 
   document.getElementById("modo-meta").addEventListener("click", function(){ trocarModo("meta"); });
   document.getElementById("modo-vendas").addEventListener("click", function(){ trocarModo("vendas"); });
 
-  // Botão "máx" nos produtos de atendimento: lota a agenda com aquele produto
-  document.querySelectorAll('.rev-row[data-tempo="1"]').forEach(function(row){
-    var qcell = row.querySelector(".qcell");
-    var campoV = row.querySelector(".rev-vendas");
-    if (!qcell || !campoV) return;
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn-max";
-    btn.textContent = "máx";
-    qcell.insertBefore(btn, campoV);
-    btn.addEventListener("click", function(){
-      var hEnc = val("hencontro");
-      var hD = val("hdisp");
-      var maxA = hEnc > 0 ? Math.floor(hD / hEnc) : 0;
-      if (maxA < 0) maxA = 0;
-      campoV.value = maxA;
-      calcESalva();
-    });
-  });
-
-  document.querySelectorAll(".rev-check, .rev-partes, .rev-price-in, .rev-vendas").forEach(function(el){
+  document.querySelectorAll(".rev-check, .rev-partes, .rev-price-in").forEach(function(el){
     el.addEventListener("input", calcESalva);
     el.addEventListener("change", calcESalva);
   });
